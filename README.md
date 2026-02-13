@@ -15,11 +15,23 @@ The program opens a GUI where we specify the location of root images and output 
 
 #### Pre-requisites for Running the Program
 
-This program needs an x86_64 processor. Any Intel or AMD processor may be used for running the program. If the CPU supports Intel AVX 2.0, the program runs faster for feature extraction.
+RhizoVision Explorer supports Windows, Linux, and macOS builds. AVX2 acceleration is used on supported x86_64 CPUs for faster feature extraction. On non-x86 targets (for example Apple Silicon), the same algorithms run using the scalar code path.
 
 #### Compiling the Source
 
-The source code is compiled using Microsoft Visual Studio. The program depends on Qt 6.9, OpenCV 4.11 or above and [cvutil](https://github.com/rootphenomicslab/cvutil) 2.5.0 libraries for compiling the source.
+The source code is compiled with CMake (C++17). The program depends on Qt 6.9, OpenCV 4.11 or above and [cvutil](https://github.com/rootphenomicslab/cvutil) 2.5.0 libraries.
+
+#### Reproducible Release Pipeline
+
+For strict cross-platform reproducibility (Windows/Linux/macOS), use the scripts in `/Users/MarcusGriffiths/Github/RhizoVisionExplorer_Mac/RhizoVisionExplorer/scripts`:
+
+- `/Users/MarcusGriffiths/Github/RhizoVisionExplorer_Mac/RhizoVisionExplorer/scripts/repro_release_build.sh`
+- `/Users/MarcusGriffiths/Github/RhizoVisionExplorer_Mac/RhizoVisionExplorer/scripts/repro_release_build.ps1`
+- `/Users/MarcusGriffiths/Github/RhizoVisionExplorer_Mac/RhizoVisionExplorer/scripts/repro-conda-env.yml`
+
+The pipeline pins OpenCV to `4.11.*` and Qt to `6.9.*`, enforces CMake parity flags, and writes a build manifest at `<install-prefix>/repro-manifest.txt`.
+
+For strict numerical parity with Windows/Linux on Apple Silicon, use the macOS script with `--mac-arch x86_64` (Rosetta runtime on Apple Silicon).
 
 #### Example Usage from Command Line
 
@@ -56,4 +68,3 @@ seethepallia@ornl.gov
 
 Larry York  
 yorklm@ornl.gov
-

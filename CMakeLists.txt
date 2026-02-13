@@ -5,6 +5,7 @@ project(RhizoVisionExplorer VERSION 2.0.3 DESCRIPTION "RhizoVision Explorer" LAN
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(GNUInstallDirs)
 
 # Set the preferred compilers in order of priority
 if(NOT CMAKE_CXX_COMPILER)
@@ -26,14 +27,44 @@ endif()
 # Options to enable or disable AVX-512 and AVX2/FMA support
 option(ENABLE_AVX512 "Enable AVX-512 support" OFF) # To be enabled on x86_64 server processors
 option(ENABLE_AVX2_FMA "Enable AVX2 and FMA support" ON) # Default support for x86_64 desktop processors
+set(RHIZO_EXPECTED_OPENCV_MAJOR_MINOR "4.11" CACHE STRING "Expected OpenCV major.minor for cross-platform parity")
+set(RHIZO_EXPECTED_QT_MAJOR_MINOR "6.9" CACHE STRING "Expected Qt major.minor for cross-platform parity")
+option(RHIZO_ENFORCE_DEPENDENCY_MAJOR_MINOR "Fail configure when OpenCV/Qt major.minor do not match expected values" ON)
+
+# Detect target architecture to gate x86-specific SIMD compiler flags.
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" RHIZO_SYSTEM_PROCESSOR_LOWER)
+if(RHIZO_SYSTEM_PROCESSOR_LOWER MATCHES "^(x86_64|amd64|x64|i[3-6]86)$")
+    set(RHIZO_TARGET_IS_X86 TRUE)
+else()
+    set(RHIZO_TARGET_IS_X86 FALSE)
+endif()
+
+set(RHIZO_ENABLE_AVX512_EFFECTIVE ${ENABLE_AVX512})
+set(RHIZO_ENABLE_AVX2_FMA_EFFECTIVE ${ENABLE_AVX2_FMA})
+if(NOT RHIZO_TARGET_IS_X86)
+    if(ENABLE_AVX512 OR ENABLE_AVX2_FMA)
+        message(STATUS "Disabling AVX compile flags for non-x86 target processor: ${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+    set(RHIZO_ENABLE_AVX512_EFFECTIVE OFF)
+    set(RHIZO_ENABLE_AVX2_FMA_EFFECTIVE OFF)
+endif()
 
 # Detect the OS
 if(WIN32)
     message(STATUS "Configuring for Windows")
+elseif(APPLE)
+    message(STATUS "Configuring for macOS")
 elseif(UNIX)
     message(STATUS "Configuring for Unix/Linux")
 else()
     message(FATAL_ERROR "Unsupported OS")
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Allow installed binaries to locate shared libraries in the same prefix.
+    set(CMAKE_MACOSX_RPATH TRUE)
+    set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} as the C++ compiler")
@@ -47,23 +78,23 @@ if(MSVC)
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:REF /OPT:ICF")
     
     # Enable AVX-512 and AVX2/FMA support
-    if(ENABLE_AVX512)
+    if(RHIZO_ENABLE_AVX512_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX512")
     endif()
-    if(ENABLE_AVX2_FMA)
+    if(RHIZO_ENABLE_AVX2_FMA_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2 /arch:AVX")
     endif()
     
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:precise /fp:strict")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG -D_DEBUG -O0")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
     
     # Enable AVX-512 and AVX2/FMA support
-    if(ENABLE_AVX512)
+    if(RHIZO_ENABLE_AVX512_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
     endif()
-    if(ENABLE_AVX2_FMA)
+    if(RHIZO_ENABLE_AVX2_FMA_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -mfma")
     endif()
     
@@ -73,10 +104,10 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
     
     # Enable AVX-512 and AVX2/FMA support
-    if(ENABLE_AVX512)
+    if(RHIZO_ENABLE_AVX512_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
     endif()
-    if(ENABLE_AVX2_FMA)
+    if(RHIZO_ENABLE_AVX2_FMA_EFFECTIVE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -mfma")
     endif()
     
@@ -91,6 +122,37 @@ find_package(OpenCV REQUIRED)
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Charts Gui OpenGL)
 qt_standard_project_setup()
+
+function(rhizo_check_major_minor package_name actual_version expected_major_minor)
+    if(NOT actual_version MATCHES "^${expected_major_minor}(\\.|$)")
+        if(RHIZO_ENFORCE_DEPENDENCY_MAJOR_MINOR)
+            message(FATAL_ERROR
+                "${package_name} version mismatch. Expected ${expected_major_minor}.x for cross-platform parity, found ${actual_version}. "
+                "Set RHIZO_ENFORCE_DEPENDENCY_MAJOR_MINOR=OFF to bypass."
+            )
+        else()
+            message(WARNING
+                "${package_name} version mismatch. Expected ${expected_major_minor}.x for cross-platform parity, found ${actual_version}."
+            )
+        endif()
+    endif()
+endfunction()
+
+if(DEFINED OpenCV_VERSION)
+    message(STATUS "Using OpenCV version: ${OpenCV_VERSION}")
+    rhizo_check_major_minor("OpenCV" "${OpenCV_VERSION}" "${RHIZO_EXPECTED_OPENCV_MAJOR_MINOR}")
+endif()
+
+if(DEFINED Qt6Core_VERSION)
+    set(RHIZO_QT_FOUND_VERSION "${Qt6Core_VERSION}")
+elseif(DEFINED Qt6_VERSION)
+    set(RHIZO_QT_FOUND_VERSION "${Qt6_VERSION}")
+endif()
+
+if(DEFINED RHIZO_QT_FOUND_VERSION)
+    message(STATUS "Using Qt version: ${RHIZO_QT_FOUND_VERSION}")
+    rhizo_check_major_minor("Qt6" "${RHIZO_QT_FOUND_VERSION}" "${RHIZO_EXPECTED_QT_MAJOR_MINOR}")
+endif()
 
 # Find cvutil
 find_package(cvutil REQUIRED)
@@ -207,7 +269,7 @@ include(CMake/cvutilInstallTargets.cmake)
 # Include the CPack module
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     include(CMake/PackageWindows.cmake)
-else(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Check if we are using a conda env or not
     if (DEFINED ENV{CONDA_PREFIX})
         message(STATUS "Using conda environment: $ENV{CONDA_PREFIX} not generating a Debian package.")
@@ -216,4 +278,6 @@ else(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(STATUS "Not using conda environment, use CPack to create a Debian package.")
         include(CMake/PackageLinux.cmake)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(STATUS "macOS build selected; DEB/Windows packaging is skipped.")
 endif()

@@ -13,21 +13,22 @@ requirements:
     - {{ compiler('cxx') }}
     - cmake
     - make
-    - qt6-main >=6.9.1
-    - qt6-charts >=6.9.1
-    - opencv >=4.11
+    - qt6-main 6.9.*
+    - qt6-charts 6.9.*
+    - opencv 4.11.*
     - cvutil
   host:
-    - opencv >=4.11
-    - qt6-main >=6.9.1
-    - qt6-charts >=6.9.1
+    - opencv 4.11.*
+    - qt6-main 6.9.*
+    - qt6-charts 6.9.*
     - libgl-devel # [linux]
     - cvutil
   run:
-    - opencv >=4.11
-    - qt6-main >=6.9.1
-    - qt6-charts >=6.9.1
-    - libstdcxx-ng
+    - opencv 4.11.*
+    - qt6-main 6.9.*
+    - qt6-charts 6.9.*
+    - libstdcxx-ng # [linux]
+    - libcxx # [osx]
     - cvutil
 
 about:

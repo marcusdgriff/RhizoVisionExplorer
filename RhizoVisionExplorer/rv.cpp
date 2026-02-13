@@ -43,6 +43,7 @@ If not, see <https://www.gnu.org/licenses/>.
 #include <regex>
 
 #include <RoiManager.h>
+#include <QtCore/QtGlobal>
 
 #include "indicators/indicators.hpp"
 
@@ -1115,6 +1116,8 @@ int main(int argc, char *argv[])
         std::cout << "RhizoVision Command Line Interface" << std::endl;
         std::cout << "Found " << imageFiles.size() << " image file(s) to process." << std::endl;
         std::cout << "Configuration:" << std::endl;
+        std::cout << "  OpenCV version: " << CV_VERSION << std::endl;
+        std::cout << "  Qt version: " << QT_VERSION_STR << std::endl;
         std::cout << "  Root type: " << (config.roottype == 0 ? "whole root" : "broken roots") << std::endl;
         std::cout << "  Threshold: " << config.threshold << std::endl;
         std::cout << "  Invert image: " << (config.invertimage ? "yes" : "no") << std::endl;

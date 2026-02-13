@@ -1,0 +1,12 @@
+name: rhizovision-repro
+channels:
+  - conda-forge
+dependencies:
+  - cmake>=3.28
+  - ninja
+  - make
+  - pkg-config
+  - qt6-main=6.9.*
+  - qt6-charts=6.9.*
+  - opencv=4.11.*
+
