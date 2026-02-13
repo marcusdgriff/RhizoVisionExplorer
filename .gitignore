@@ -39,3 +39,5 @@
 CMakePresets.json
 CMakeUserPresets.json
 
+# macOS system files
+.DS_Store
