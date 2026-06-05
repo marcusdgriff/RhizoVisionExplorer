@@ -36,7 +36,6 @@ add_custom_command(TARGET RhizoVisionExplorer POST_BUILD
         "$<TARGET_BUNDLE_DIR:RhizoVisionExplorer>"
         -verbose=1
         -no-strip
-        -no-codesign
         "-libpath=${_conda_lib}"
     COMMAND ${CMAKE_COMMAND}
         "-DBUNDLE_DIR=$<TARGET_BUNDLE_DIR:RhizoVisionExplorer>"

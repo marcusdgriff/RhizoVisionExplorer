@@ -42,10 +42,18 @@ endif()
 # Detect the OS
 if(WIN32)
     message(STATUS "Configuring for Windows")
+elseif(APPLE)
+    message(STATUS "Configuring for macOS")
 elseif(UNIX)
     message(STATUS "Configuring for Unix/Linux")
 else()
     message(FATAL_ERROR "Unsupported OS")
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(CMAKE_MACOSX_RPATH TRUE)
+    set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} as the C++ compiler")
@@ -67,7 +75,7 @@ if(MSVC)
     endif()
     
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:precise /fp:strict")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG -D_DEBUG -O0")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
     
